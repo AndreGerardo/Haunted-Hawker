@@ -8,6 +8,8 @@ public class Condiment : MonoBehaviour
     [Header("CONDIMENT CONFIGURATION")]
     [HideInInspector]
     public string ID;
+    [HideInInspector]
+    public int basePrice;
     public SpriteRenderer spriteRenderer;
 
     private void Awake()

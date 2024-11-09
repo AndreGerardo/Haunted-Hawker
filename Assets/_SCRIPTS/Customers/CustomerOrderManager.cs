@@ -19,6 +19,7 @@ public class CustomerOrderManager : MonoBehaviour
     {
         public string orderID;
         public Customer customer;
+        public int customerOrderPos;
     }
 
     [System.Serializable]
@@ -46,6 +47,8 @@ public class CustomerOrderManager : MonoBehaviour
     private Customer customerPrefab;
     [SerializeField]
     private float customerSpawnRate;
+    [SerializeField]
+    private bool canSpawnCustomer = false;
 
     private float spawnTimer = 0f;
 
@@ -76,20 +79,19 @@ public class CustomerOrderManager : MonoBehaviour
     private void Update()
     {
 
-        //DEBUG
-        if (Input.GetKeyDown(KeyCode.P))
+        if (canSpawnCustomer)
         {
-            GenerateFoodOrder(OrderDifficulty.EASY);
-        }
+            spawnTimer += Time.deltaTime;
 
-        if (Input.GetKeyDown(KeyCode.L))
-        {
-            GenerateFoodOrder(OrderDifficulty.MEDIUM);
-        }
+            if (spawnTimer >= customerSpawnRate)
+            {
+                int rdmDifficulty = UnityEngine.Random.Range(0, Enum.GetValues(typeof(OrderDifficulty)).Length);
 
-        if (Input.GetKeyDown(KeyCode.O))
-        {
-            GenerateFoodOrder(OrderDifficulty.HARD);
+                GenerateFoodOrder((OrderDifficulty) Enum.GetValues(typeof(OrderDifficulty)).GetValue(rdmDifficulty));
+
+                spawnTimer = 0f;
+            }
+
         }
     }
 
@@ -109,13 +111,21 @@ public class CustomerOrderManager : MonoBehaviour
 
         return (null, -1);
 
-        //return customerOrderList.FirstOrDefault(order => order.orderID.CompareTo(foodOrderID) == 0).customer;
+    }
 
+    public void EnableCustomerSpawner()
+    {
+        canSpawnCustomer = true;
     }
 
     public void CheckFoodOrderFromList(int index)
     {
         customerOrderList.RemoveAt(index);
+    }
+
+    public void DeleteCustomerOrder(Customer deletedCustomer)
+    {
+        customerOrderList.RemoveAll(x => x.customerOrderPos == deletedCustomer.currentOrderPos);
     }
 
     public void GenerateFoodOrder(OrderDifficulty orderDifficulty)
@@ -138,43 +148,49 @@ public class CustomerOrderManager : MonoBehaviour
         Customer customerObj = ObjectPooler.instance.GetPooledObject(customerPoolIndex).GetComponent<Customer>();
         customerObj.transform.position = customerOutsidePos[UnityEngine.Random.Range(0, customerOutsidePos.Length - 1)].position;
         customerObj.gameObject.SetActive(true);
-
-        customerObj.SetCustomerTargetPosition(customerOrderPos[orderPosIndex].orderPos.position, () => customerObj.SetOrderPanelState(true));
         customerObj.currentOrderPos = orderPosIndex;
 
         currentCustomerInQueue++;
 
-        for (int i = 0; i < randomOrderAmount; i++)
+        customerObj.SetCustomerTargetPosition(customerOrderPos[orderPosIndex].orderPos.position, () =>
         {
-            int randomCookingStation = UnityEngine.Random.Range(0, cookingStationManagers.Length - 1);
+            customerObj.SetOrderPanelState(true);
 
-            (FoodItem generatedFood, CondimentItem[] generatedCondiments) = cookingStationManagers[randomCookingStation].GetRandomFoodItem(orderDifficulty);
-
-            string foodOrderID = $"{generatedFood.ID}";
-            for (int j = 0; j < generatedCondiments.Length; j++)
+            for (int i = 0; i < randomOrderAmount; i++)
             {
-                foodOrderID += $"_{generatedCondiments[j].ID}";
+                int randomCookingStation = UnityEngine.Random.Range(0, cookingStationManagers.Length - 1);
+
+                (FoodItem generatedFood, CondimentItem[] generatedCondiments) = cookingStationManagers[randomCookingStation].GetRandomFoodItem(orderDifficulty);
+
+                string foodOrderID = $"{generatedFood.ID}";
+                for (int j = 0; j < generatedCondiments.Length; j++)
+                {
+                    foodOrderID += $"_{generatedCondiments[j].ID}";
+                }
+
+                customerObj.AddFoodOrder(foodOrderID, generatedFood, generatedCondiments, cookingStationManagers[randomCookingStation].foodPlateSprite);
+
+                CustomerOrder customerOrderItem = new CustomerOrder();
+                customerOrderItem.orderID = foodOrderID;
+                customerOrderItem.customer = customerObj;
+                customerOrderItem.customerOrderPos = orderPosIndex;
+                customerOrderList.Add(customerOrderItem);
+
             }
+        });
 
-            customerObj.AddFoodOrder(foodOrderID, generatedFood, generatedCondiments, cookingStationManagers[randomCookingStation].foodPlateSprite);
-
-            CustomerOrder customerOrderItem = new CustomerOrder();
-            customerOrderItem.orderID = foodOrderID;
-            customerOrderItem.customer = customerObj;
-            customerOrderList.Add(customerOrderItem);
-
-        }
 
     }
 
     public void OnCompleteCustomerOrder(Customer customer)
     {
         customerOrderPos[customer.currentOrderPos].isAvailable = true;
+        currentCustomerInQueue--;
         customer.SetCustomerTargetPosition(customerOutsidePos[UnityEngine.Random.Range(0, customerOutsidePos.Length - 1)].position, () =>
         {
             customer.gameObject.SetActive(false);
         });
-        currentCustomerInQueue--;
+        
     }
 
     #endregion

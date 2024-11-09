@@ -26,6 +26,10 @@ public class CookingModule : BaseInteractionModule
     private float burningTime;
     private float timer = 0f;
 
+    [Header("DOUBLE TAP CONFIGURATION")]
+    private float lastTapTime = 0f;
+    private float doubleTapTime = 0.3f;
+
 
     public void InitCookingModule(CookingStationManager c, float setCookingTime, float setBurningTime)
     {
@@ -66,10 +70,14 @@ public class CookingModule : BaseInteractionModule
     public void StartCooking(FoodItem f)
     {
         if (isCooking || isDoneCooking) return;
+
+        timer = 0f;
+
         isCooking = true;
 
         currentFood = f;
 
+        foodSpriteRenderer.color = Color.white;
         foodSpriteRenderer.sprite = f.rawSprite;
         foodSpriteRenderer.sortingOrder = f.spriteOrder;
         foodSpriteRenderer.gameObject.SetActive(true);
@@ -91,6 +99,7 @@ public class CookingModule : BaseInteractionModule
     private void BurnFood()
     {
         isBurned = true;
+        foodSpriteRenderer.color = Color.black;
     }
 
     private void CollectFood()
@@ -100,7 +109,7 @@ public class CookingModule : BaseInteractionModule
         if (!isDoneCooking) return;
 
         FoodPlateModule foodPlateModule = cookingStationManager.GetAvailableFoodPlateModule();
-        if (foodPlateModule != null)
+        if (foodPlateModule != null && !isBurned)
         {
             isDoneCooking = false;
             cookingModuleSprite.sprite = cookingStateSprite[0];
@@ -109,6 +118,25 @@ public class CookingModule : BaseInteractionModule
 
             foodSpriteRenderer.gameObject.SetActive(false);
             currentFood = null;
+        }
+        else
+        {
+            if (Time.time - lastTapTime <= doubleTapTime)
+            {
+                lastTapTime = 0f;
+
+                isDoneCooking = false;
+                isBurned = false;
+                cookingModuleSprite.sprite = cookingStateSprite[0];
+
+                foodSpriteRenderer.color = Color.white;
+                foodSpriteRenderer.gameObject.SetActive(false);
+                currentFood = null;
+            }
+            else
+            {
+                lastTapTime = Time.time;
+            }
         }
 
         

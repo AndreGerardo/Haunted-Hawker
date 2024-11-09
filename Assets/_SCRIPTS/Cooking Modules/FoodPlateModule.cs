@@ -1,3 +1,4 @@
+using DG.Tweening;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -16,12 +17,18 @@ public class FoodPlateModule : BaseInteractionModule
     private Dictionary<string, SpriteRenderer> condimentDictionary = new Dictionary<string, SpriteRenderer>();
     private List<Condiment> condimentCollection = new List<Condiment>();
 
+    [Header("DOUBLE TAP CONFIGURATION")]
+    private float lastTapTime = 0f;
+    private float doubleTapTime = 0.3f;
+
+
 
     public override void Interact()
     {
         base.Interact();
 
         ServeOrder();
+
 
     }
 
@@ -43,6 +50,7 @@ public class FoodPlateModule : BaseInteractionModule
     {
         Condiment condimentObj = Instantiate(c.condimentPrefab, transform);
         condimentObj.ID = c.ID;
+        condimentObj.basePrice = c.basePrice;
         condimentCollection.Add(condimentObj);
         condimentDictionary.Add(condimentObj.ID, condimentObj.spriteRenderer);
         condimentObj.gameObject.SetActive(false);
@@ -69,6 +77,8 @@ public class FoodPlateModule : BaseInteractionModule
             condimentCollection[i].gameObject.SetActive(false);
         }
 
+        transform.localPosition = Vector3.zero;
+
         foodOrderID = string.Empty;
         currentFood = null;
         isFoodAvailable = false;
@@ -78,25 +88,51 @@ public class FoodPlateModule : BaseInteractionModule
     {
         if (!isFoodAvailable) return;
 
-        foodOrderID = $"{currentFood.ID}";
-        for (int i = 0; i < condimentCollection.Count; i++)
+        int totalProfit = 0;
+
+        if (currentFood != null)
         {
-            if (condimentCollection[i].gameObject.activeSelf)
+            totalProfit = currentFood.basePrice;
+
+            foodOrderID = $"{currentFood.ID}";
+            for (int i = 0; i < condimentCollection.Count; i++)
             {
-                foodOrderID += $"_{condimentCollection[i].ID}";
+                if (condimentCollection[i].gameObject.activeSelf)
+                {
+                    foodOrderID += $"_{condimentCollection[i].ID}";
+                    totalProfit += condimentCollection[i].basePrice;
+                }
             }
         }
+
 
         (Customer customer, int orderIndex) = CustomerOrderManager.instance.GetCustomerOrderIfAvailable(foodOrderID);
         if (customer != null)
         {
-            customer.CheckFoodOrder(foodOrderID);
-            CustomerOrderManager.instance.CheckFoodOrderFromList(orderIndex);
-            Debug.Log($"Served Order : {foodOrderID}");
-            ResetPlate();
+            transform.DOMove(customer.transform.position, 0.25f)
+                .OnComplete(() =>
+                {
+                    customer.CheckFoodOrder(foodOrderID);
+                    CustomerOrderManager.instance.CheckFoodOrderFromList(orderIndex);
+
+                    GameEvent.OnMoneyAdded?.Invoke(totalProfit);
+
+                    ResetPlate();
+                });
         }
         else
         {
+
+            if (Time.time - lastTapTime <= doubleTapTime)
+            {
+                lastTapTime = 0f;
+                ResetPlate();
+            }
+            else
+            {
+                lastTapTime = Time.time;
+            }
+
             FeedbackBounceAnim();
         }
 

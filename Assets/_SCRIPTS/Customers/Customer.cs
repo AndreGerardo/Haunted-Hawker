@@ -83,6 +83,19 @@ public class Customer : MonoBehaviour
             {
                 patienceTimer = 0f;
                 hasStartedWaiting = false;
+
+                for (int i = 0; i < currentOrder.Length; i++)
+                {
+                    currentOrder[i].orderID = string.Empty;
+                    currentOrder[i].orderImage.ResetOrder();
+                    currentOrder[i].orderImage.gameObject.SetActive(false);
+                }
+
+                CustomerOrderManager.instance.DeleteCustomerOrder(this);
+
+                EndOrder();
+
+                GameEvent.OnCustomerLeft?.Invoke();
             }
 
         }
@@ -109,6 +122,7 @@ public class Customer : MonoBehaviour
             if (currentOrder[i].orderID.CompareTo(foodOrderID) == 0)
             {
                 currentOrder[i].orderID = string.Empty;
+                currentOrder[i].orderImage.ResetOrder();
                 currentOrder[i].orderImage.gameObject.SetActive(false);
                 currentOrderIndex--;
 
@@ -119,10 +133,14 @@ public class Customer : MonoBehaviour
         //On Order Complete
         if(currentOrderIndex == 0)
         {
-            hasStartedWaiting = false;
-            SetOrderPanelState(false);
-            customerPatienceSlider.fillRect.GetComponent<Image>().color = customerSatisfiedColor;
-            CustomerOrderManager.instance.OnCompleteCustomerOrder(this);
+            if(isSatisfied)
+            {
+                GameEvent.OnCustomerSatisfied?.Invoke();
+            }
+
+            GameEvent.OnCustomerServed?.Invoke();
+
+            EndOrder();
         }
 
     }
@@ -138,6 +156,17 @@ public class Customer : MonoBehaviour
         {
             customerOrderPanelCanvasGroup.DOFade(0f, 0.125f);
         }
+    }
+
+    private void EndOrder()
+    {
+        currentOrderIndex = 0;
+        patienceTimer = 0f;
+        hasStartedWaiting = false;
+        SetOrderPanelState(false);
+        isSatisfied = true;
+        customerPatienceSlider.fillRect.GetComponent<Image>().color = customerSatisfiedColor;
+        CustomerOrderManager.instance.OnCompleteCustomerOrder(this);
     }
 
     #endregion
