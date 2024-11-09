@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76fff125d9ad5bb49906fd78b1c4f920, type: 3}
+  m_Name: SateAyam
+  m_EditorClassIdentifier: 
+  ID: SateAyam
+  basePrice: 5
+  cookedSprite: {fileID: 21300000, guid: 8de50ff0a91a4bf4d806988f0af26cbf, type: 3}
+  rawSprite: {fileID: 21300000, guid: 9a33fc6a1e26a2c4e8a3385e0f15aaed, type: 3}
+  spriteOrder: 1
